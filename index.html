@@ -91,7 +91,7 @@ pre{white-space:pre-wrap;word-break:break-word;font:inherit;margin:0;font-size:1
  <label for="d">Date</label><input id="d" type="date">
  <button class="save" id="save">Save entry</button>
  <div class="card" id="dl"></div>
- <div class="card"><h3>Backup</h3><p class="empty" style="padding:0 0 8px">Download all saved entries as a PDF.</p><button class="save" style="margin:0" id="bk">Download PDF</button></div>
+ <div class="card"><h3>Backup</h3><p class="empty" style="padding:0 0 8px">Download all saved entries as a PDF.</p><button class="save" style="margin:0" id="bk">Download PDF</button><button class="save" style="margin:10px 0 0;background:var(--ink);box-shadow:none" id="sh">Send all to Google Sheet</button></div>
  <div class="card hide" id="nocloud"><h3>Cloud not connected</h3><p class="empty" style="padding:0">Entries are saved on this phone only.</p></div>
  <div class="card hide" id="mig"><h3>Old entries on this phone</h3><p class="empty" style="padding:0 0 8px"><span id="mc">0</span> entries are not in the cloud yet.</p><button class="save" style="margin:0" id="up">Upload to cloud</button></div>
  <div class="card hide" id="acct"><div class="row" style="border:0"><span class="t">Signed in<small id="who"></small></span><button class="x" id="so">Sign out</button></div></div>
@@ -191,6 +191,15 @@ function pdfFor(list,title,fname,cb){
    D.text("Total: Sales "+N(T.s)+"   Expenses "+N(T.x)+"   "+(T.p<0?"Loss ":"Profit ")+N(Math.abs(T.p)),M,y);
    D.save(fname);cb(true)
   }catch(err){toast("PDF failed");cb(false)}})}
+var SHEET_URL="https://script.google.com/macros/s/AKfycbyX02xG04hDpV71Qf5rXaMZWErZqSciBrVwm2UTcGx8qSOMOwwp6dGjaGqQ9Dfcw5dmOQ/exec",SHEET_SECRET="wn-314f78fd22aa75cd4fe0";
+function sqGet(){try{return JSON.parse(localStorage.getItem("wn-sheetq")||"[]")}catch(e){return[]}}
+function sqSet(q){try{localStorage.setItem("wn-sheetq",JSON.stringify(q))}catch(e){}}
+var sflush=false;
+function sheetSend(p){if(!SHEET_URL)return;p.secret=SHEET_SECRET;var q=sqGet();q.push(p);sqSet(q);sheetFlush()}
+function sheetFlush(){if(!SHEET_URL||sflush)return;var q=sqGet();if(!q.length)return;sflush=true;
+ fetch(SHEET_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(q[0])})
+ .then(function(){var c=sqGet();c.shift();sqSet(c);sflush=false;sheetFlush()}).catch(function(){sflush=false})}
+addEventListener("online",sheetFlush);setTimeout(sheetFlush,3000);
 function renderSum(){
  var l=inR(),t=tot(l);
  if(!l.length){$("v-sum").innerHTML='<div class="empty">No entries in this period.<br>Go to Add to record sales and expenses.</div>'+archCard();return}
@@ -229,10 +238,11 @@ document.addEventListener("click",function(ev){var b=ev.target.closest("button")
  else if(b.dataset.n)shift(+b.dataset.n);
  else if(b.dataset.m){M=b.dataset.m}
  else if(b.dataset.t){T=b.dataset.t;setCats()}
- else if(b.dataset.del){if(window.CLOUD&&CLOUD.on){CLOUD.del(b.dataset.del);return}E=E.filter(function(e){return String(e.id)!==b.dataset.del});save()}
+ else if(b.dataset.del){sheetSend({action:"del",id:b.dataset.del});if(window.CLOUD&&CLOUD.on){CLOUD.del(b.dataset.del);return}E=E.filter(function(e){return String(e.id)!==b.dataset.del});save()}
  else if(b.id==="save"){var a=parseFloat($("a").value);if(!(a>0)){toast("Enter an amount");$("a").focus();return}
-  var ne={id:Date.now(),d:$("d").value||today(),t:T,m:T==="s"?M:"",q:T==="s"&&parseFloat($("cp").value)>=0?parseFloat($("cp").value):null,a:a,c:$("c").value,n:$("n").value.trim()};if(window.CLOUD&&CLOUD.on)CLOUD.put(ne);else{E.push(ne);save()}
+  var ne={id:Date.now(),d:$("d").value||today(),t:T,m:T==="s"?M:"",q:T==="s"&&parseFloat($("cp").value)>=0?parseFloat($("cp").value):null,a:a,c:$("c").value,n:$("n").value.trim()};sheetSend({action:"put",entry:ne});if(window.CLOUD&&CLOUD.on)CLOUD.put(ne);else{E.push(ne);save()}
   $("a").value="";$("n").value="";$("cp").value="";toast(T==="s"?"Sale saved":"Expense saved")}
+ else if(b.id==="sh"){if(!SHEET_URL){toast("Google Sheet is not set up yet");return}if(!E.length){toast("No entries");return}for(var i=0;i<E.length;i+=100)sheetSend({action:"bulk",entries:E.slice(i,i+100)});toast("Sending to Google Sheet...");return}
  else if(b.id==="bk"){pdfFor(E.slice(),"All saved entries - "+today(),"WrapNation_backup_"+today()+".pdf",function(){});return}
  else if(b.id==="cp"){var t=$("rt").textContent;
   try{navigator.clipboard.writeText(t).then(function(){toast("Report copied")},function(){sel()})}catch(e){sel()}
