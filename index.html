@@ -191,7 +191,7 @@ function pdfFor(list,title,fname,cb){
    D.text("Total: Sales "+N(T.s)+"   Expenses "+N(T.x)+"   "+(T.p<0?"Loss ":"Profit ")+N(Math.abs(T.p)),M,y);
    D.save(fname);cb(true)
   }catch(err){toast("PDF failed");cb(false)}})}
-var SHEET_URL="https://script.google.com/macros/s/AKfycbyX02xG04hDpV71Qf5rXaMZWErZqSciBrVwm2UTcGx8qSOMOwwp6dGjaGqQ9Dfcw5dmOQ/exec",SHEET_SECRET="wn-314f78fd22aa75cd4fe0";
+var SHEET_URL="https://script.google.com/macros/s/AKfycbyAy6iCw95oCT0H3h8j6QDXg1rlZix0fAy03Ljzp0fHrZSOAYm04FaOaEfXKOF_9QfGpw/exec",SHEET_SECRET="wn-314f78fd22aa75cd4fe0";
 function sqGet(){try{return JSON.parse(localStorage.getItem("wn-sheetq")||"[]")}catch(e){return[]}}
 function sqSet(q){try{localStorage.setItem("wn-sheetq",JSON.stringify(q))}catch(e){}}
 var sflush=false;
