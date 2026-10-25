@@ -197,9 +197,10 @@ function sqSet(q){try{localStorage.setItem("wn-sheetq",JSON.stringify(q))}catch(
 var sflush=false;
 function sheetSend(p){if(!SHEET_URL)return;p.secret=SHEET_SECRET;var q=sqGet();q.push(p);sqSet(q);sheetFlush()}
 function sheetFlush(){if(!SHEET_URL||sflush)return;var q=sqGet();if(!q.length)return;sflush=true;
- fetch(SHEET_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(q[0])})
- .then(function(){var c=sqGet();c.shift();sqSet(c);sflush=false;sheetFlush()}).catch(function(){sflush=false})}
-addEventListener("online",sheetFlush);setTimeout(sheetFlush,3000);
+ var ac=new AbortController(),tm=setTimeout(function(){ac.abort()},25000);
+ fetch(SHEET_URL,{method:"POST",mode:"no-cors",signal:ac.signal,headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(q[0])})
+ .then(function(){clearTimeout(tm);var c=sqGet();c.shift();sqSet(c);sflush=false;sheetFlush()}).catch(function(){clearTimeout(tm);sflush=false})}
+addEventListener("online",sheetFlush);setTimeout(sheetFlush,3000);setInterval(sheetFlush,20000);
 function renderSum(){
  var l=inR(),t=tot(l);
  if(!l.length){$("v-sum").innerHTML='<div class="empty">No entries in this period.<br>Go to Add to record sales and expenses.</div>'+archCard();return}
